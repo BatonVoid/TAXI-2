@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, Router, types, F
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ChatMember
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, BigInteger, select
@@ -21,7 +21,10 @@ logging.basicConfig(
 
 # ==== 🔐 Конфигурация ====
 BOT_TOKEN = "7802810585:AAHCuTyF2RXgl5qbUaLPK74dhwxvb8dSekA"
-REQUIRED_CHANNEL = "@taxi_nukus_tashkent"
+REQUIRED_CHANNELS = [
+    "@Nokis113",
+    "@Nukus14"
+]
 ADMIN_ID = 5111968766  # Admin IDs
 DATABASE_URL = "sqlite+aiosqlite:///./taxi_bot.db"
 
@@ -99,12 +102,20 @@ def get_admin_keyboard():
 # ==== 🤖 Логика ====
 router = Router()
 
-# async def check_subscription(bot: Bot, user_id: int) -> bool:
-#     try:
-#         member = await bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
-#         return member.status in ("member", "administrator", "creator")
-#     except Exception:
-#         return False
+async def check_subscriptions(bot: Bot, user_id: int) -> tuple[bool, list[str]]:
+    not_subscribed = []
+
+    for channel in REQUIRED_CHANNELS:
+        try:
+            member: ChatMember = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+            if member.status not in ("member", "administrator", "creator"):
+                not_subscribed.append(channel)
+        except Exception:
+            # Если канал не найден или бот не имеет доступа
+            not_subscribed.append(channel)
+
+    is_subscribed_everywhere = len(not_subscribed) == 0
+    return is_subscribed_everywhere, not_subscribed
 
 async def add_or_update_user(user_id: int):
     async with SessionLocal() as session:
@@ -140,9 +151,13 @@ async def cmd_start(message: Message):
     bot = message.bot
     user_id = message.from_user.id
 
-    # if not await check_subscription(bot, user_id):
-    #     await message.answer("❗ Dáslep kanalǵa aǵza bolıń: @taxi_nukus_tashkent")
-    #     return
+    is_subscribed, not_subscribed_channels = await check_subscriptions(bot, user_id)
+    if not is_subscribed:
+        text = "❗ Daslep kanallarga agza:\n\n"
+        for channel in not_subscribed_channels:
+            text += f"👉 {channel}\n"
+        await message.answer(text)
+        return
 
     await add_or_update_user(user_id)
 
