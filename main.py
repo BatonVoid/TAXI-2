@@ -25,7 +25,7 @@ REQUIRED_CHANNELS = [
     "@Nokis113",
     "@Nukus14"
 ]
-ADMIN_ID = 5111968766  # Admin IDs
+ADMIN_ID = 1033785549  # Admin IDs
 DATABASE_URL = "sqlite+aiosqlite:///./taxi_bot.db"
 
 # ==== 🧱 База данных ====
